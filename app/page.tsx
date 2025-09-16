@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar
 } from "recharts";
+import dynamic from "next/dynamic";
 
 type SensorData = {
   roomName: string;
@@ -16,9 +17,13 @@ type SensorData = {
   date: string;
 };
 
+const Model3D = dynamic(() => import("./Model3D"), { ssr: false });
+
 export default function Home() {
   const [data, setData] = useState<SensorData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
+  const [graphPos, setGraphPos] = useState<{x: number, y: number} | null>(null);
 
   useEffect(() => {
     fetch("/api/sensor-data")
@@ -29,17 +34,43 @@ export default function Home() {
       });
   }, []);
 
+  // 교실별 데이터 필터링
+  const filtered = selectedRoom ? data.filter(d => d.roomName === selectedRoom) : data;
+
+  // 3D 라벨 클릭 시 위치와 교실명 저장
+  function handleSelectRoom(room: string, pos: {x: number, y: number}) {
+    setSelectedRoom(room);
+    setGraphPos(pos);
+  }
+
+  // 그래프 닫기
+  function closeGraph() {
+    setSelectedRoom(null);
+    setGraphPos(null);
+  }
+
   return (
-    <div className="font-sans min-h-screen p-8 pb-20 flex flex-col gap-16 items-center">
+    <div className="font-sans min-h-screen p-8 pb-20 flex flex-col gap-10 items-center" style={{position: 'relative'}}>
       <h1 className="text-3xl font-bold mb-2">센서 데이터 대시보드</h1>
-      {loading ? (
-        <div>Loading...</div>
-      ) : (
-        <div className="w-full max-w-5xl flex flex-col gap-12">
-          <div className="bg-white rounded-xl shadow p-6">
-            <h2 className="text-xl font-semibold mb-4">미세먼지 (PM10, PM2.5)</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+      <div style={{width: '100%', maxWidth: 900, position: 'relative'}}>
+        <Model3D onSelectRoom={handleSelectRoom} />
+        {selectedRoom && graphPos && (
+          <div style={{
+            position: 'absolute',
+            left: graphPos.x,
+            top: graphPos.y,
+            zIndex: 10,
+            background: 'white',
+            borderRadius: 12,
+            boxShadow: '0 4px 24px #0002',
+            padding: 24,
+            minWidth: 350,
+            maxWidth: 500
+          }}>
+            <button onClick={closeGraph} style={{position: 'absolute', right: 12, top: 8, fontWeight: 'bold'}}>X</button>
+            <h2 className="text-xl font-semibold mb-4">{selectedRoom} 센서 데이터</h2>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={filtered} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" tick={{ fontSize: 12 }} minTickGap={30} />
                 <YAxis />
@@ -49,13 +80,10 @@ export default function Home() {
                 <Line type="monotone" dataKey="pm25" stroke="#82ca9d" name="PM2.5" />
               </LineChart>
             </ResponsiveContainer>
-          </div>
-          <div className="bg-white rounded-xl shadow p-6">
-            <h2 className="text-xl font-semibold mb-4">CO₂, VOC</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+            <ResponsiveContainer width="100%" height={120}>
+              <BarChart data={filtered} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} minTickGap={30} />
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} minTickGap={30} />
                 <YAxis />
                 <Tooltip />
                 <Legend />
@@ -63,13 +91,10 @@ export default function Home() {
                 <Bar dataKey="voc" fill="#387908" name="VOC" />
               </BarChart>
             </ResponsiveContainer>
-          </div>
-          <div className="bg-white rounded-xl shadow p-6">
-            <h2 className="text-xl font-semibold mb-4">온도 & 습도</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+            <ResponsiveContainer width="100%" height={120}>
+              <LineChart data={filtered} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} minTickGap={30} />
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} minTickGap={30} />
                 <YAxis yAxisId="left" orientation="left" />
                 <YAxis yAxisId="right" orientation="right" />
                 <Tooltip />
@@ -79,9 +104,8 @@ export default function Home() {
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
-      )}
-      {/* 안내/로고/푸터 영역 제거됨 */}
+        )}
+      </div>
     </div>
   );
 }

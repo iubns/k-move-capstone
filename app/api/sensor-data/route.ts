@@ -7,7 +7,8 @@ export async function GET() {
   const lines = fileContent.split('\n').filter(Boolean);
 
   // 데이터 파싱: 각 줄을 구조체에 맞게 파싱
-  const data = lines.map(line => {
+  const sampled = lines.filter((_, i) => i % 100 === 0);
+  const data = sampled.map(line => {
     const parts = line.split(/\s+/);
     return {
       roomName: parts[0],
