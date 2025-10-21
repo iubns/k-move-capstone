@@ -53,6 +53,7 @@ jobs:
         uses: actions/configure-pages@v4
         with:
           static_site_generator: next
+          enablement: true
 
       - name: Build with Next.js
         run: pnpm build
