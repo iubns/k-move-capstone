@@ -5,8 +5,8 @@ type Model3DProps = {
 
 import { Canvas, useLoader, useThree } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
-import { useState, useEffect, Suspense, useRef } from "react";
-import { OBJLoader, MTLLoader } from "three-stdlib";
+import { useState, useEffect, Suspense, useRef, useMemo } from "react";
+import { STLLoader } from "three-stdlib";
 
 // 실제 데이터에 존재하는 교실명만 사용
 const CLASSROOMS: { name: string; position: [number, number, number] }[] = [
@@ -17,33 +17,59 @@ const CLASSROOMS: { name: string; position: [number, number, number] }[] = [
 
 import * as THREE from "three";
 
-function FountainModel() {
-  // 텍스처(mtl) 파일이 있으면 함께 로드
-  try {
-    const materials = useLoader(MTLLoader, "/models/Fountain.mtl");
-    const obj = useLoader(OBJLoader, "/models/Fountain.obj", loader => {
-      materials.preload();
-      loader.setMaterials(materials);
-    });
-  return <primitive object={obj} scale={0.0005} position={[0, 0, 0]} />;
-  } catch {
-    // mtl이 없으면 obj만 로드하고, 기본 색상 적용
-    const obj = useLoader(OBJLoader, "/models/Fountain.obj");
-    // 모든 mesh에 무작위 머티리얼 적용 (알록달록)
-    const palette = ["#e57373", "#64b5f6", "#81c784", "#ffd54f", "#ba68c8", "#ffb74d", "#4dd0e1", "#a1887f", "#f06292", "#90a4ae"];
-    let colorIdx = 0;
-    obj.traverse(child => {
-      if ((child as THREE.Mesh).isMesh) {
-        (child as THREE.Mesh).material = new THREE.MeshStandardMaterial({ color: palette[colorIdx % palette.length] });
-        colorIdx++;
-      }
-    });
-    return <primitive object={obj} scale={0.1} position={[0, 0, 0]} />;
-  }
+// 모델이 자동으로 맞춰질 때의 목표 크기(씬 단위)
+// 값을 키우면 로드된 모델이 더 크게 보입니다.
+const MODEL_TARGET_SIZE = 48;
+
+function FirstModel({ color }: { color: string }) {
+  // Load STL unconditionally - returns BufferGeometry
+  const geometry = useLoader(STLLoader, "/models/k-move-3.stl");
+  const meshRef = useRef<THREE.Mesh>(null);
+
+  // compute center and scale once per loaded geometry
+  const { center, scale } = useMemo(() => {
+    if (!geometry) return { center: new THREE.Vector3(0, 0, 0), scale: 1 };
+
+    geometry.computeBoundingBox();
+    const bbox = geometry.boundingBox;
+    if (!bbox) return { center: new THREE.Vector3(0, 0, 0), scale: 1 };
+
+    const size = new THREE.Vector3();
+    bbox.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scale = maxDim > 0 ? MODEL_TARGET_SIZE / maxDim : 1;
+    const center = new THREE.Vector3();
+    bbox.getCenter(center);
+
+    return { center, scale };
+  }, [geometry]);
+
+  // Apply color to material when color changes
+  useEffect(() => {
+    if (meshRef.current && meshRef.current.material) {
+      const mat = meshRef.current.material as THREE.MeshStandardMaterial;
+      mat.color.set(color);
+      mat.needsUpdate = true;
+    }
+  }, [color]);
+
+  // Render mesh from geometry with declarative transforms
+  return (
+    <group scale={[scale, scale, scale]}>
+      <mesh 
+        ref={meshRef}
+        geometry={geometry} 
+        position={[-center.x, -center.y, -center.z]}
+      >
+        <meshStandardMaterial color={color} />
+      </mesh>
+    </group>
+  );
 }
 
 export default function Model3D({ onSelectRoom }: Model3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [color, setColor] = useState<string>('#81c784');
   // 3D 라벨 클릭 시 2D 스크린 좌표 계산
   function RoomLabels() {
     const { camera, size } = useThree();
@@ -84,11 +110,11 @@ export default function Model3D({ onSelectRoom }: Model3DProps) {
   }
   return (
     <div ref={containerRef} style={{ width: "100%", height: 600, position: "relative" }}>
-      <Canvas camera={{ position: [0, 5, 10], fov: 50 }} style={{ background: '#fff' }}>
+      <Canvas camera={{ position: [0, 8, 20], fov: 50 }} style={{ background: '#fff' }}>
         <ambientLight intensity={0.7} />
         <directionalLight position={[5, 10, 7]} intensity={0.5} />
         <Suspense fallback={null}>
-          <FountainModel />
+          <FirstModel color={color} />
         </Suspense>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
           <planeGeometry args={[10, 10]} />
@@ -97,6 +123,13 @@ export default function Model3D({ onSelectRoom }: Model3DProps) {
         <RoomLabels />
         <OrbitControls />
       </Canvas>
+      {/* Color picker overlay */}
+      <div style={{ position: 'absolute', left: 16, top: 16, background: 'white', padding: 8, borderRadius: 8, boxShadow: '0 6px 18px rgba(0,0,0,0.12)' }}>
+        <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>
+          <span style={{ fontWeight: 600 }}>Model color</span>
+          <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
+        </label>
+      </div>
     </div>
   );
 }

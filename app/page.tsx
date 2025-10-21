@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar
 } from "recharts";
+// import dynamic from "next/dynamic";
 import dynamic from "next/dynamic";
+
+const Model3D = dynamic(() => import("./Model3D"), { ssr: false });
 
 type SensorData = {
   roomName: string;
@@ -16,8 +19,6 @@ type SensorData = {
   humidity: number;
   date: string;
 };
-
-const Model3D = dynamic(() => import("./Model3D"), { ssr: false });
 
 export default function Home() {
   const [data, setData] = useState<SensorData[]>([]);
@@ -52,8 +53,11 @@ export default function Home() {
   return (
     <div className="font-sans min-h-screen p-8 pb-20 flex flex-col gap-10 items-center" style={{position: 'relative'}}>
       <h1 className="text-3xl font-bold mb-2">센서 데이터 대시보드</h1>
-      <div style={{width: '100%', maxWidth: 900, position: 'relative'}}>
-        <Model3D onSelectRoom={handleSelectRoom} />
+      <div style={{
+        width: '100vw',
+        height: '100vh',
+        position: 'relative'}}>
+  <Model3D onSelectRoom={handleSelectRoom} />
         {selectedRoom && graphPos && (
           <div style={{
             position: 'absolute',
