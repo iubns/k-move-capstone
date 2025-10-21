@@ -4,21 +4,10 @@ import { useEffect, useState } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar
 } from "recharts";
-// import dynamic from "next/dynamic";
 import dynamic from "next/dynamic";
+import { fetchSensorData, type SensorData } from "./utils/sensorData";
 
 const Model3D = dynamic(() => import("./Model3D"), { ssr: false });
-
-type SensorData = {
-  roomName: string;
-  pm10: number;
-  pm25: number;
-  co2: number;
-  voc: number;
-  temperature: number;
-  humidity: number;
-  date: string;
-};
 
 export default function Home() {
   const [data, setData] = useState<SensorData[]>([]);
@@ -27,10 +16,13 @@ export default function Home() {
   const [graphPos, setGraphPos] = useState<{x: number, y: number} | null>(null);
 
   useEffect(() => {
-    fetch("/api/sensor-data")
-      .then((res) => res.json())
-      .then((json) => {
-        setData(json.data);
+    fetchSensorData()
+      .then((data) => {
+        setData(data);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error('Error loading sensor data:', error);
         setLoading(false);
       });
   }, []);
@@ -51,8 +43,12 @@ export default function Home() {
   }
 
   return (
-    <div className="font-sans min-h-screen p-8 pb-20 flex flex-col gap-10 items-center" style={{position: 'relative'}}>
-      <h1 className="text-3xl font-bold mb-2">센서 데이터 대시보드</h1>
+    <div className="font-sans min-h-screen flex flex-col gap-10 items-center" style={{
+      color: 'black',
+      position: 'relative'}}>
+        <div className="fixed top-0 left-0 w-full z-10 p-4 text-center">
+          <h1 className="text-3xl font-bold mb-2">센서 데이터 대시보드</h1>
+        </div>
       <div style={{
         width: '100vw',
         height: '100vh',
@@ -63,17 +59,17 @@ export default function Home() {
             position: 'absolute',
             left: graphPos.x,
             top: graphPos.y,
-            zIndex: 10,
+            zIndex: 1000,
             background: 'white',
             borderRadius: 12,
-            boxShadow: '0 4px 24px #0002',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.2)',
             padding: 24,
-            minWidth: 350,
-            maxWidth: 500
+            minWidth: 500,
+            maxWidth: 700
           }}>
-            <button onClick={closeGraph} style={{position: 'absolute', right: 12, top: 8, fontWeight: 'bold'}}>X</button>
+            <button onClick={closeGraph} style={{position: 'absolute', right: 12, top: 8, fontWeight: 'bold', cursor: 'pointer', fontSize: 20, background: 'none', border: 'none'}}>✕</button>
             <h2 className="text-xl font-semibold mb-4">{selectedRoom} 센서 데이터</h2>
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={220}>
               <LineChart data={filtered} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" tick={{ fontSize: 12 }} minTickGap={30} />
@@ -84,7 +80,7 @@ export default function Home() {
                 <Line type="monotone" dataKey="pm25" stroke="#82ca9d" name="PM2.5" />
               </LineChart>
             </ResponsiveContainer>
-            <ResponsiveContainer width="100%" height={120}>
+            <ResponsiveContainer width="100%" height={140}>
               <BarChart data={filtered} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} minTickGap={30} />
@@ -95,7 +91,7 @@ export default function Home() {
                 <Bar dataKey="voc" fill="#387908" name="VOC" />
               </BarChart>
             </ResponsiveContainer>
-            <ResponsiveContainer width="100%" height={120}>
+            <ResponsiveContainer width="100%" height={140}>
               <LineChart data={filtered} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} minTickGap={30} />

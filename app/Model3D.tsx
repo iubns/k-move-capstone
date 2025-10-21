@@ -10,9 +10,9 @@ import { STLLoader } from "three-stdlib";
 
 // 실제 데이터에 존재하는 교실명만 사용
 const CLASSROOMS: { name: string; position: [number, number, number] }[] = [
-  { name: "M502", position: [0, 0, 0] },
-  { name: "M507", position: [2, 0, 0] },
-  { name: "M520", position: [-2, 0, 0] },
+  { name: "M502", position: [10, 1, -5] },
+  { name: "M507", position: [11, 1, 5] },
+  { name: "M520", position: [-10, 1, -3] },
 ];
 
 import * as THREE from "three";
@@ -30,6 +30,9 @@ function FirstModel({ color }: { color: string }) {
   const { center, scale } = useMemo(() => {
     if (!geometry) return { center: new THREE.Vector3(0, 0, 0), scale: 1 };
 
+    // Compute vertex normals for smooth shading
+    geometry.computeVertexNormals();
+    
     geometry.computeBoundingBox();
     const bbox = geometry.boundingBox;
     if (!bbox) return { center: new THREE.Vector3(0, 0, 0), scale: 1 };
@@ -55,13 +58,18 @@ function FirstModel({ color }: { color: string }) {
 
   // Render mesh from geometry with declarative transforms
   return (
-    <group scale={[scale, scale, scale]}>
+    <group scale={[scale, scale, scale]} rotation={[-Math.PI / 2, 0, 0]}>
       <mesh 
         ref={meshRef}
         geometry={geometry} 
         position={[-center.x, -center.y, -center.z]}
       >
-        <meshStandardMaterial color={color} />
+        <meshStandardMaterial 
+          color={color}
+          flatShading={false}
+          roughness={0.5}
+          metalness={0.1}
+        />
       </mesh>
     </group>
   );
@@ -109,15 +117,15 @@ export default function Model3D({ onSelectRoom }: Model3DProps) {
     );
   }
   return (
-    <div ref={containerRef} style={{ width: "100%", height: 600, position: "relative" }}>
+    <div ref={containerRef} style={{ width: "100%", height: '100%', position: "relative" }}>
       <Canvas camera={{ position: [0, 8, 20], fov: 50 }} style={{ background: '#fff' }}>
         <ambientLight intensity={0.7} />
         <directionalLight position={[5, 10, 7]} intensity={0.5} />
         <Suspense fallback={null}>
           <FirstModel color={color} />
         </Suspense>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
-          <planeGeometry args={[10, 10]} />
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.5, 0]}>
+          <planeGeometry args={[50, 50]} />
           <meshStandardMaterial color="#e0e0e0" />
         </mesh>
         <RoomLabels />
