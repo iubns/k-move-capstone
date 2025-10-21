@@ -23,7 +23,7 @@ const MODEL_TARGET_SIZE = 48;
 
 function FirstModel({ color }: { color: string }) {
   // Load STL unconditionally - returns BufferGeometry
-  const geometry = useLoader(STLLoader, "/models/k-move-3.stl");
+  const geometry = useLoader(STLLoader, "/k-move-capstone/models/k-move-3.stl");
   const meshRef = useRef<THREE.Mesh>(null);
 
   // compute center and scale once per loaded geometry
