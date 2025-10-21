@@ -56,7 +56,10 @@ jobs:
           enablement: true
 
       - name: Build with Next.js
-        run: pnpm build
+        run: |
+          echo "Starting Next.js build..."
+          pnpm build
+          echo "Build completed. Exit code: $?"
         env:
           NODE_ENV: production
 
@@ -64,6 +67,11 @@ jobs:
         run: |
           echo "=== Root directory ==="
           ls -la
+          echo ""
+          echo "=== next.config files ==="
+          cat next.config.ts || echo "next.config.ts not found"
+          echo ""
+          cat next.config.js || echo "next.config.js not found"
           echo ""
           echo "=== .next directory ==="
           ls -la .next/ || echo ".next directory not found!"
