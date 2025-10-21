@@ -62,10 +62,17 @@ jobs:
 
       - name: List build output
         run: |
-          echo "Checking build output..."
+          echo "=== Root directory ==="
           ls -la
-          echo "Checking out directory..."
+          echo ""
+          echo "=== .next directory ==="
+          ls -la .next/ || echo ".next directory not found!"
+          echo ""
+          echo "=== out directory ==="
           ls -la out/ || echo "out directory not found!"
+          echo ""
+          echo "=== Searching for static export output ==="
+          find . -maxdepth 2 -type d -name "out" -o -name "dist" -o -name "build"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
