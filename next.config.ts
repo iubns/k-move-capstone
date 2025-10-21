@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const isProd = process.env.NODE_ENV === 'production';
-const repoName = 'terab'; // GitHub 저장소 이름으로 변경
+const repoName = 'k-move-capstone'; // GitHub 저장소 이름
 
 const nextConfig: NextConfig = {
   output: 'export',
