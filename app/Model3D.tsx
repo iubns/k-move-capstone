@@ -1,5 +1,5 @@
 type Model3DProps = {
-  onSelectRoom: (room: string, pos: { x: number, y: number }) => void;
+  onSelectRoom: (room: string) => void;
 };
 "use client";
 
@@ -7,6 +7,7 @@ import { Canvas, useLoader, useThree } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
 import { useState, useEffect, Suspense, useRef, useMemo } from "react";
 import { STLLoader } from "three-stdlib";
+import { fetchSensorData, type SensorData } from "./utils/sensorData";
 
 // 실제 데이터에 존재하는 교실명만 사용
 const CLASSROOMS: { name: string; position: [number, number, number] }[] = [
@@ -23,7 +24,7 @@ const MODEL_TARGET_SIZE = 48;
 
 function FirstModel({ color }: { color: string }) {
   // Load STL unconditionally - returns BufferGeometry
-  const geometry = useLoader(STLLoader, "/k-move-capstone/models/k-move-3.stl");
+  const geometry = useLoader(STLLoader, "/models/k-move-3.stl");
   const meshRef = useRef<THREE.Mesh>(null);
 
   // compute center and scale once per loaded geometry
@@ -78,6 +79,7 @@ function FirstModel({ color }: { color: string }) {
 export default function Model3D({ onSelectRoom }: Model3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [color, setColor] = useState<string>('#81c784');
+  const [latestByRoom, setLatestByRoom] = useState<Record<string, SensorData | null>>({});
   // 3D 라벨 클릭 시 2D 스크린 좌표 계산
   function RoomLabels() {
     const { camera, size } = useThree();
@@ -96,26 +98,82 @@ export default function Model3D({ onSelectRoom }: Model3DProps) {
               center
               style={{ pointerEvents: "auto" }}
             >
-              <button
-                onClick={() => onSelectRoom(room.name, { x, y })}
+              <div
+                onClick={() => onSelectRoom(room.name)}
+                role="button"
                 style={{
                   background: "#fff",
-                  border: "1px solid #888",
-                  borderRadius: 8,
-                  padding: "4px 12px",
-                  fontWeight: "bold",
+                  border: "1px solid #e6e6e6",
+                  borderRadius: 10,
+                  padding: "8px 12px",
                   cursor: "pointer",
-                  boxShadow: "0 2px 8px #0002",
+                  boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  minWidth: 120
                 }}
               >
-                {room.name}
-              </button>
+                <div style={{ fontWeight: 800, fontSize: 14 }}>{room.name}</div>
+                <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
+                  {(() => {
+                    const info = latestByRoom[room.name];
+                    const pm25 = info?.pm25 ?? null;
+                    const co2 = info?.co2 ?? null;
+                    const temp = info?.temperature ?? null;
+                    const chip = (label: string, value: string | number | null, bg = '#f0f0f0') => (
+                      <div style={{ background: bg, padding: '4px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700, color: '#111' }}>{label}: {value ?? '–'}</div>
+                    );
+
+                    // color coding for pm25
+                    const pmBg = pm25 === null ? '#f0f0f0' : (pm25 > 35 ? '#ffe6e6' : pm25 > 15 ? '#fff4e0' : '#e8f7e8');
+                    const coBg = co2 === null ? '#f0f0f0' : (co2 > 1000 ? '#ffe6e6' : '#e8f7e8');
+
+                    return (
+                      <>
+                        {chip('PM2.5', pm25 !== null ? Math.round((pm25 + Number.EPSILON) * 10) / 10 : null, pmBg)}
+                        {chip('CO₂', co2 !== null ? Math.round(co2) : null, coBg)}
+                        {chip('T', temp !== null ? Math.round((temp + Number.EPSILON) * 10) / 10 : null, '#f0f7ff')}
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
             </Html>
           );
         })}
       </>
     );
   }
+
+  // Fetch latest sensor readings for displayed classrooms
+  useEffect(() => {
+    let mounted = true;
+    fetchSensorData()
+      .then((data) => {
+        if (!mounted) return;
+        const map: Record<string, SensorData | null> = {};
+        CLASSROOMS.forEach((c) => {
+          const entries = data.filter(d => d.roomName === c.name);
+          if (entries.length === 0) {
+            map[c.name] = null;
+          } else {
+            // pick latest by parsed date when possible
+            const latest = entries.reduce((a, b) => {
+              const da = Date.parse(a.date) || 0;
+              const db = Date.parse(b.date) || 0;
+              return da >= db ? a : b;
+            });
+            map[c.name] = latest;
+          }
+        });
+        setLatestByRoom(map);
+      })
+      .catch((err) => {
+        console.error('Failed to fetch latest sensor data for labels:', err);
+      });
+    return () => { mounted = false };
+  }, []);
   return (
     <div ref={containerRef} style={{ width: "100%", height: '100%', position: "relative" }}>
       <Canvas camera={{ position: [0, 8, 20], fov: 50 }} style={{ background: '#fff' }}>
