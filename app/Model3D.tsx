@@ -23,8 +23,18 @@ import * as THREE from "three";
 const MODEL_TARGET_SIZE = 48;
 
 function FirstModel({ color }: { color: string }) {
+  // Respect basePath for public assets (GitHub Pages serves under /<repo>)
+  // Prefer explicit public env, otherwise fall back to build-time NODE_ENV.
+  // If neither was applied at build time (e.g. client-side on Pages), try to infer from the current pathname.
+  const envBase = process.env.NEXT_PUBLIC_BASE_PATH ?? (process.env.NODE_ENV === 'production' ? '/k-move-capstone' : '');
+  let inferredBase = envBase;
+  if (!inferredBase && typeof window !== 'undefined') {
+    // If the site is hosted at /k-move-capstone/* on GitHub Pages, pathname will include it.
+    if (window.location.pathname.includes('/k-move-capstone')) inferredBase = '/k-move-capstone';
+  }
+  const modelUrl = `${inferredBase}/models/k-move-3.stl`;
   // Load STL unconditionally - returns BufferGeometry
-  const geometry = useLoader(STLLoader, "/models/k-move-3.stl");
+  const geometry = useLoader(STLLoader, modelUrl);
   const meshRef = useRef<THREE.Mesh>(null);
 
   // compute center and scale once per loaded geometry
