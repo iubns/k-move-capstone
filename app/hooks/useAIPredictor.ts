@@ -116,6 +116,13 @@ export function useAIPredictor(filtered: SensorData[], roomName?: string | null)
           slope.temp = (last.d.temp - first.d.temp) / span;
         }
 
+        // compute averages from useData (needed for synthesizing missing days)
+        const vals = useData.map(d => ({ pm25: Number(d.pm25), co2: Number(d.co2), temp: Number(d.temperature) }));
+        const avg = vals.reduce((acc, v) => ({ pm25: acc.pm25 + v.pm25, co2: acc.co2 + v.co2, temp: acc.temp + v.temp }), { pm25: 0, co2: 0, temp: 0 });
+        avg.pm25 /= Math.max(1, vals.length);
+        avg.co2 /= Math.max(1, vals.length);
+        avg.temp /= Math.max(1, vals.length);
+
         // Fill missing days by interpolation where possible, otherwise synthesize from avg + slope
         const days = rawDays.map((d, idx) => {
           if (d) return d;
@@ -150,12 +157,7 @@ export function useAIPredictor(filtered: SensorData[], roomName?: string | null)
           return { pm25, co2, temp };
         });
 
-        // compute averages from useData
-        const vals = useData.map(d => ({ pm25: Number(d.pm25), co2: Number(d.co2), temp: Number(d.temperature) }));
-        const avg = vals.reduce((acc, v) => ({ pm25: acc.pm25 + v.pm25, co2: acc.co2 + v.co2, temp: acc.temp + v.temp }), { pm25: 0, co2: 0, temp: 0 });
-        avg.pm25 /= Math.max(1, vals.length);
-        avg.co2 /= Math.max(1, vals.length);
-        avg.temp /= Math.max(1, vals.length);
+        // (avg already computed above)
 
         const recommendation = '최근 수치 기반 권장: 환기 우선, PM2.5가 지속 높다면 공기정화기 가동을 권장합니다.';
         setReply({ kind: 'analysis', avg: { pm25: avg.pm25, co2: avg.co2, temp: avg.temp }, days, recommendation });
