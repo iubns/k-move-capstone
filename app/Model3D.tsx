@@ -200,7 +200,7 @@ export default function Model3D({ onSelectRoom }: Model3DProps) {
         <OrbitControls />
       </Canvas>
       {/* Color picker overlay */}
-      <div style={{ position: 'absolute', left: 16, top: 16, background: 'white', padding: 8, borderRadius: 8, boxShadow: '0 6px 18px rgba(0,0,0,0.12)' }}>
+  <div style={{ position: 'absolute', left: 16, top: 16, background: 'white', padding: 8, borderRadius: 8, boxShadow: '0 6px 18px rgba(0,0,0,0.12)', zIndex: 1000, pointerEvents: 'auto' }}>
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>
           <span style={{ fontWeight: 600 }}>Model color</span>
           <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
