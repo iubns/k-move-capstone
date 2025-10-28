@@ -121,7 +121,7 @@ export default function Model3D({ onSelectRoom }: Model3DProps) {
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  minWidth: 120
+                  minWidth: 250
                 }}
               >
                 <div style={{ fontWeight: 800, fontSize: 14 }}>{room.name}</div>
