@@ -50,7 +50,7 @@ export function useAIPredictor(filtered: SensorData[], roomName?: string | null)
       // Try to fetch a small tail of the real data file and compute a 7-day summary for the selected room
       try {
         const basePath = process.env.NODE_ENV === 'production' ? '/k-move-capstone' : '';
-        const res = await fetch(`${basePath}/data_HW4_new.txt`);
+        const res = await fetch(`${basePath}/data_HW4_sorted.txt`);
         const text = await res.text();
         const lines = text.split('\n').filter(Boolean);
         // only examine the last N lines to keep performance reasonable
@@ -172,7 +172,7 @@ export function useAIPredictor(filtered: SensorData[], roomName?: string | null)
     if ((lower.includes('예측') || lower.includes('예상'))) {
       try {
         const basePath = process.env.NODE_ENV === 'production' ? '/k-move-capstone' : '';
-        const res = await fetch(`${basePath}/data_HW4_new.txt`);
+        const res = await fetch(`${basePath}/data_HW4_sorted.txt`);
         const text = await res.text();
         const lines = text.split('\n').filter(Boolean);
         const TAIL = 1200; // inspect last lines only
