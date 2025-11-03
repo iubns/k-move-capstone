@@ -9,11 +9,28 @@ import { useState, useEffect, Suspense, useRef, useMemo } from "react";
 import { STLLoader } from "three-stdlib";
 import { fetchSensorData, type SensorData } from "./utils/sensorData";
 
+const height = 1
 // 실제 데이터에 존재하는 교실명만 사용
 const CLASSROOMS: { name: string; position: [number, number, number] }[] = [
-  { name: "M502", position: [10, 1, -5] },
-  { name: "M507", position: [11, 1, 5] },
-  { name: "M520", position: [-10, 1, -3] },
+  { name: "M501", position: [-20, height, 10] },
+  { name: "M502", position: [-20, height, 2] },
+  { name: "M503", position: [-20, height, -6] },
+  { name: "M504", position: [-20, height, -13] },
+  //{ name: "M505", position: [-20, height, -17] },
+  { name: "M506", position: [-7, height, -15] },
+  //{ name: "M507", position: [-3, height, -15] },
+  //{ name: "M508", position: [1, height, -15] },
+  { name: "M509", position: [5, height, -15] },
+  { name: "M510", position: [6, height, -10] },
+  //{ name: "M511", position: [8, height, -10] },
+  //{ name: "M512", position: [12, height, -10] },
+  { name: "M513", position: [16, height, -10] },
+  { name: "M514", position: [20, height, 1] },
+  //{ name: "M515", position: [16, height, 1] },
+  { name: "M516", position: [12, height, 1] },
+  { name: "M518", position: [4, height, 5] },
+  //{ name: "M519", position: [-4, height, 5] },
+  { name: "M520", position: [-10, height, 5] },
 ];
 
 import * as THREE from "three";
@@ -32,7 +49,7 @@ function FirstModel({ color }: { color: string }) {
     // If the site is hosted at /k-move-capstone/* on GitHub Pages, pathname will include it.
     if (window.location.pathname.includes('/k-move-capstone')) inferredBase = '/k-move-capstone';
   }
-  const modelUrl = `${inferredBase}/models/k-move-3.stl`;
+  const modelUrl = `${inferredBase}/models/ml5.stl`;
   // Load STL unconditionally - returns BufferGeometry
   const geometry = useLoader(STLLoader, modelUrl);
   const meshRef = useRef<THREE.Mesh>(null);
@@ -121,7 +138,7 @@ export default function Model3D({ onSelectRoom }: Model3DProps) {
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  minWidth: 250
+                  minWidth: 220
                 }}
               >
                 <div style={{ fontWeight: 800, fontSize: 14 }}>{room.name}</div>
