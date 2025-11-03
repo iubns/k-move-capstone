@@ -3,7 +3,7 @@ export async function fetchSensorData() {
   try {
     // basePath를 고려하여 경로 설정
     const basePath = process.env.NODE_ENV === 'production' ? '/k-move-capstone' : '';
-    const response = await fetch(`${basePath}/data_HW4.txt`);
+    const response = await fetch(`${basePath}/data_HW4_new.txt`);
     const fileContent = await response.text();
     const lines = fileContent.split('\n').filter(Boolean);
 

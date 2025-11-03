@@ -102,13 +102,64 @@ function FirstModel({ color }: { color: string }) {
     </group>
   );
 }
-
 export default function Model3D({ onSelectRoom }: Model3DProps) {
+  
   const containerRef = useRef<HTMLDivElement>(null);
+  const controlsRef = useRef<any>(null);
   const [color, setColor] = useState<string>('#81c784');
   const [latestByRoom, setLatestByRoom] = useState<Record<string, SensorData | null>>({});
+  const idleTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [autoRotate, setAutoRotate] = useState(false);
+  const [ctrlDown, setCtrlDown] = useState(false);
+
+  // Reset idle timer and disable auto-rotate on user input
+  const resetIdleTimer = () => {
+    if (idleTimeout.current) clearTimeout(idleTimeout.current);
+    setAutoRotate(false);
+    idleTimeout.current = setTimeout(() => {
+      setAutoRotate(true);
+    }, 10000); // 10 seconds
+  };
+
+  useEffect(() => {
+    const handleUserInput = (e: Event) => {
+      resetIdleTimer();
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Control') setCtrlDown(true);
+      resetIdleTimer();
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Control') setCtrlDown(false);
+      resetIdleTimer();
+    };
+    window.addEventListener('mousemove', handleUserInput);
+    window.addEventListener('mousedown', handleUserInput);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('wheel', handleUserInput);
+    window.addEventListener('touchstart', handleUserInput);
+    resetIdleTimer();
+    return () => {
+      if (idleTimeout.current) clearTimeout(idleTimeout.current);
+      window.removeEventListener('mousemove', handleUserInput);
+      window.removeEventListener('mousedown', handleUserInput);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('wheel', handleUserInput);
+      window.removeEventListener('touchstart', handleUserInput);
+    };
+  }, []);
+
+  // Update OrbitControls pan/rotate state based on ctrl key
+  useEffect(() => {
+    if (controlsRef.current) {
+      controlsRef.current.enablePan = ctrlDown;
+      controlsRef.current.enableRotate = !ctrlDown;
+    }
+  }, [ctrlDown]);
   // 3D 라벨 클릭 시 2D 스크린 좌표 계산
-  function RoomLabels() {
+  const RoomLabels = () => {
     const { camera, size } = useThree();
     return (
       <>
@@ -171,7 +222,7 @@ export default function Model3D({ onSelectRoom }: Model3DProps) {
         })}
       </>
     );
-  }
+  };
 
   // Fetch latest sensor readings for displayed classrooms
   useEffect(() => {
@@ -203,7 +254,7 @@ export default function Model3D({ onSelectRoom }: Model3DProps) {
   }, []);
   return (
     <div ref={containerRef} style={{ width: "100%", height: '100%', position: "relative" }}>
-      <Canvas camera={{ position: [0, 8, 20], fov: 50 }} style={{ background: '#fff' }}>
+  <Canvas camera={{ position: [0, 8, 20], fov: 50 }} style={{ background: '#fff' }}>
         <ambientLight intensity={0.7} />
         <directionalLight position={[5, 10, 7]} intensity={0.5} />
         <Suspense fallback={null}>
@@ -214,7 +265,13 @@ export default function Model3D({ onSelectRoom }: Model3DProps) {
           <meshStandardMaterial color="#e0e0e0" />
         </mesh>
         <RoomLabels />
-        <OrbitControls />
+        <OrbitControls
+          ref={controlsRef}
+          autoRotate={autoRotate}
+          autoRotateSpeed={0.5}
+          enablePan={ctrlDown}
+          enableRotate={!ctrlDown}
+        />
       </Canvas>
       {/* Color picker overlay */}
   <div style={{ position: 'absolute', left: 16, top: 16, background: 'white', padding: 8, borderRadius: 8, boxShadow: '0 6px 18px rgba(0,0,0,0.12)', zIndex: 1000, pointerEvents: 'auto' }}>
