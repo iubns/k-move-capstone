@@ -169,6 +169,12 @@ export default function Model3D({ onSelectRoom }: Model3DProps) {
           vec.project(camera);
           const x = ((vec.x + 1) / 2) * size.width;
           const y = ((-vec.y + 1) / 2) * size.height;
+          // Alert: 이상치(임계치 초과) 시각화
+          const info = latestByRoom[room.name];
+          const pm25 = info?.pm25 ?? null;
+          const co2 = info?.co2 ?? null;
+          const temp = info?.temperature ?? null;
+          const isAlert = (pm25 !== null && pm25 > 35) || (co2 !== null && co2 > 1000);
           return (
             <Html
               key={room.name}
@@ -181,32 +187,28 @@ export default function Model3D({ onSelectRoom }: Model3DProps) {
                 role="button"
                 style={{
                   background: "#fff",
-                  border: "1px solid #e6e6e6",
+                  border: isAlert ? "2px solid #ff5252" : "1px solid #e6e6e6",
                   borderRadius: 10,
                   padding: "8px 12px",
                   cursor: "pointer",
-                  boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+                  boxShadow: isAlert ? "0 0 24px 4px #ff5252, 0 6px 18px rgba(0,0,0,0.12)" : "0 6px 18px rgba(0,0,0,0.12)",
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  minWidth: 220
+                  minWidth: 220,
+                  animation: isAlert ? 'roomPulseGlow 1.6s infinite alternate' : undefined,
+                  transition: 'box-shadow 0.3s, border 0.3s',
                 }}
               >
                 <div style={{ fontWeight: 800, fontSize: 14 }}>{room.name}</div>
                 <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
                   {(() => {
-                    const info = latestByRoom[room.name];
-                    const pm25 = info?.pm25 ?? null;
-                    const co2 = info?.co2 ?? null;
-                    const temp = info?.temperature ?? null;
                     const chip = (label: string, value: string | number | null, bg = '#f0f0f0') => (
                       <div style={{ background: bg, padding: '4px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700, color: '#111' }}>{label}: {value ?? '–'}</div>
                     );
-
                     // color coding for pm25
                     const pmBg = pm25 === null ? '#f0f0f0' : (pm25 > 35 ? '#ffe6e6' : pm25 > 15 ? '#fff4e0' : '#e8f7e8');
                     const coBg = co2 === null ? '#f0f0f0' : (co2 > 1000 ? '#ffe6e6' : '#e8f7e8');
-
                     return (
                       <>
                         {chip('PM2.5', pm25 !== null ? Math.round((pm25 + Number.EPSILON) * 10) / 10 : null, pmBg)}
@@ -219,6 +221,28 @@ export default function Model3D({ onSelectRoom }: Model3DProps) {
               </div>
             </Html>
           );
+
+// Ensure alert pulse style is injected only once at module load
+if (typeof window !== 'undefined') {
+  const styleId = 'room-alert-glow-pulse-style';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.innerHTML = `
+      @keyframes roomPulseGlow {
+        0% { box-shadow: 0 0 8px 2px #ff5252, 0 6px 18px rgba(0,0,0,0.12); }
+        50% { box-shadow: 0 0 32px 12px #ff5252, 0 6px 18px rgba(0,0,0,0.12); }
+        100% { box-shadow: 0 0 8px 2px #ff5252, 0 6px 18px rgba(0,0,0,0.12); }
+      }
+      .room-alert-glow-pulse {
+        box-shadow: 0 0 24px 4px #ff5252, 0 6px 18px rgba(0,0,0,0.12) !important;
+        border: 2px solid #ff5252 !important;
+        animation: roomPulseGlow 1.6s infinite alternate !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+}
         })}
       </>
     );
