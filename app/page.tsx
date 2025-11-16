@@ -14,6 +14,10 @@ export default function Home() {
   const [data, setData] = useState<SensorData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
+  const [acLoading, setAcLoading] = useState(false);
+  const [acMessage, setAcMessage] = useState<string | null>(null);
+  const [acState, setAcState] = useState<string | null>(null); // 'on' | 'off' | null
+  const [lastAutoToggleAt, setLastAutoToggleAt] = useState<number | null>(null);
 
   useEffect(() => {
     fetchSensorData()
@@ -41,6 +45,55 @@ export default function Home() {
   }
 
   const { input: chatInput, setInput: setChatInput, reply: chatReply, loading: chatLoading, submit: handleChatSubmit } = useAIPredictor(filtered, selectedRoom);
+
+  async function toggleAC() {
+    setAcLoading(true);
+    setAcMessage(null);
+    try {
+      const res = await fetch('/api/toggle-ac', { method: 'POST' });
+      const json = await res.json().catch(() => null);
+      if (res.ok && json) {
+        // External device response is placed under `data` by the proxy route.
+        const device = json.data ?? json;
+        if (device && typeof device === 'object' && 'status' in device) {
+          const st = String((device as any).status);
+          setAcState(st);
+          setAcMessage(st === 'on' ? '에어컨이 켜졌습니다.' : '에어컨이 꺼졌습니다.');
+        } else if (typeof device === 'string') {
+          setAcMessage(device);
+        } else {
+          setAcMessage('에어컨 토글 요청을 보냈습니다.');
+        }
+      } else {
+        setAcMessage(json?.error ?? `서버 응답 오류: ${res.status}`);
+      }
+    } catch (err: any) {
+      setAcMessage(String(err?.message ?? err));
+    } finally {
+      setAcLoading(false);
+      // clear message after a short delay
+      setTimeout(() => setAcMessage(null), 4000);
+    }
+  }
+
+  // Auto-toggle after AI analysis result (opt-in)
+  useEffect(() => {
+    if (!chatReply) return;
+    if (chatReply.kind !== 'analysis') return;
+    // Only auto-toggle for room 502
+    const is502 = selectedRoom === '502' || (selectedRoom && selectedRoom.includes && selectedRoom.includes('502'));
+    if (!is502) return;
+
+    const now = Date.now();
+    if (lastAutoToggleAt && now - lastAutoToggleAt < 5000) {
+      // prevent double-trigger within short window
+      return;
+    }
+    setLastAutoToggleAt(now);
+    // Fire-and-forget toggle
+    toggleAC();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatReply, selectedRoom]);
 
   return (
     <div className="font-sans min-h-screen flex flex-col gap-10 items-center" style={{
@@ -71,6 +124,15 @@ export default function Home() {
           }}>
             <button onClick={closeGraph} style={{position: 'absolute', right: 12, top: 8, fontWeight: 'bold', cursor: 'pointer', fontSize: 20, background: 'none', border: 'none'}}>✕</button>
             <h2 className="text-xl font-semibold mb-4">{selectedRoom} 센서 데이터</h2>
+            {/* AC control for room 502 */}
+            {(selectedRoom === '502' || (selectedRoom && selectedRoom.includes && selectedRoom.includes('502'))) && (
+              <div style={{ marginBottom: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button onClick={toggleAC} disabled={acLoading} style={{ padding: '8px 12px', borderRadius: 8, background: acLoading ? '#9ca3af' : '#0ea5e9', color: 'white', border: 'none', cursor: acLoading ? 'default' : 'pointer' }}>
+                  {acLoading ? '요청 중...' : (acState === 'on' ? '에어컨 끄기' : '에어컨 켜기')}
+                </button>
+                {acMessage && <div style={{ fontSize: 13, color: '#111' }}>{acMessage}</div>}
+              </div>
+            )}
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={filtered} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
